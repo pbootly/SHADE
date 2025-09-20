@@ -1,0 +1,7 @@
+storage:
+  mode: socket
+  database_url: 'sqlite::memory:'
+  socket_path: /tmp/shade.sock
+server:
+  host: 127.0.0.1
+  port: 5000

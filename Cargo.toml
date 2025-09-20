@@ -1,0 +1,29 @@
+[package]
+name = "shade"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+utoipa = { version = "4", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "4", features = ["actix-web"] }
+sqlx = { version = "0.7", features = [
+  "runtime-tokio-rustls",
+  "sqlite",
+  "chrono",
+  "uuid",
+] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+async-trait = "0.1"
+tokio-util = { version = "0.7", features = ["codec"] }
+futures-util = "0.3"
+base64 = "0.22.1"
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
+rand = "0.8"

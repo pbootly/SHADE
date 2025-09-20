@@ -1,0 +1,6 @@
+storage:
+  mode: file
+  database_url: 'sqlite:///tmp/shade.db'
+server:
+  host: 127.0.0.1
+  port: 3000
