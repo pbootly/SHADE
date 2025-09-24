@@ -15,8 +15,8 @@ impl SqliteStorage {
     pub async fn new(database_url: &str) -> Result<Self> {
         let pool = SqlitePool::connect(database_url).await?;
 
-        // Run migrations
-        sqlx::migrate!("./migrations").run(&pool).await?;
+        sqlx::query("DROP TABLE IF EXISTS keys;").execute(&pool).await?;
+        sqlx::query(INITIAL_MIGRATION).execute(&pool).await?;
 
         Ok(Self { pool })
     }

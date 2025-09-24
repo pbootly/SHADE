@@ -13,7 +13,7 @@ pub fn generate_keys() -> Result<(String, String)> {
 
 pub fn generate_public_from_private(priv_b64: &str) -> Result<String> {
     let priv_bytes = base64::engine::general_purpose::STANDARD.decode(priv_b64.trim())?;
-    let secret = StaticSecret::from(<[u8; 32]>::try_from(priv_bytes.as_slice())?);
+    let secret = StaticSecret::from(<[u8; 32]>::try_from(priv_bytes.as_slicae())?);
     let public = PublicKey::from(&secret);
     let pub_b64 = general_purpose::STANDARD.encode(public.as_bytes());
     Ok(pub_b64)

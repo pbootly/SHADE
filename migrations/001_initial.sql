@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS keys (
     public_key TEXT NOT NULL,
     private_key TEXT NOT NULL,
     ip_address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

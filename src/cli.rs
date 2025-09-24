@@ -68,14 +68,14 @@ async fn register_key(config_path: &str, private_key: String) -> Result<()> {
     match config.storage.mode {
         crate::config::StorageMode::File => {
             let storage = create_storage(&config).await?;
-            let keypair = crate::storage::KeyPair::new(private_key, None);
+            let keypair = crate::storage::KeyPair::new(private_key, None)?;
             storage.register_key(keypair.clone()).await?;
             println!("Key registered successfully with ID: {}", keypair.id);
         }
         crate::config::StorageMode::Socket => {
             let socket_path = config.storage.socket_path.as_ref().unwrap();
             let client = crate::socket::SocketClient::new(socket_path);
-            let keypair = crate::storage::KeyPair::new(private_key, None);
+            let keypair = crate::storage::KeyPair::new(private_key, None)?;
             let response = client
                 .send_message(crate::socket::SocketMessage::RegisterKey(keypair.clone()))
                 .await?;
