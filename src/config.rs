@@ -47,31 +47,24 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn load_from_path(config_path: &str) -> Result<Self> {
+    pub fn load(config_path: &str) -> Result<Self> {
         if Path::new(config_path).exists() {
-            let content = fs::read_to_string(config_path)?;
-            let config: Config = serde_yaml::from_str(&content)?;
-            Ok(config)
-        } else {
-            // Create default config file
-            let config = Config::default();
-            let yaml = serde_yaml::to_string(&config)?;
-            fs::write(config_path, yaml)?;
-            println!("Created default config file: {}", config_path);
-            Ok(config)
+            return Self::load_from_path(config_path);
         }
+        println!(
+            "Warning: Config file '{}' not found. Using default configuration.",
+            config_path
+        );
+        Ok(Config::default())
+    }
+
+    pub fn load_from_path(config_path: &str) -> Result<Self> {
+        let content = fs::read_to_string(config_path)?;
+        let config: Config = serde_yaml::from_str(&content)?;
+        Ok(config)
     }
 
     pub fn validate(&self) -> Result<()> {
-        // Security guard: SQLite only allowed on localhost
-        if self.server.host != "127.0.0.1" && self.server.host != "localhost" {
-            anyhow::bail!(
-                "SQLite storage is only allowed when server is bound to 127.0.0.1 or localhost. Current host: {}",
-                self.server.host
-            );
-        }
-
-        // Validate storage configuration based on mode
         match self.storage.mode {
             StorageMode::File => {
                 if self.storage.database_url.is_none() {

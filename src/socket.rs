@@ -2,32 +2,35 @@ use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Arc;
 use tokio::net::{UnixListener, UnixStream};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SocketMessage {
-    RegisterCert(crate::storage::CertificateRegistration),
-    RevokeCert { id: String },
-    ListCerts,
+    RegisterKey(crate::storage::KeyPair),
+    RevokeKey { id: String },
+    ListKey,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SocketResponse {
-    CertRegistered(crate::storage::Certificate),
-    CertRevoked,
-    CertList(Vec<crate::storage::Certificate>),
+    KeyRegistered(crate::storage::KeyPair),
+    KeyRevoked,
+    KeyList(Vec<crate::storage::KeyPair>),
     Error(String),
 }
 
 pub struct SocketServer {
     listener: UnixListener,
-    storage: std::sync::Arc<Box<dyn crate::storage::StorageBackend>>,
+    storage: Arc<Box<dyn crate::storage::StorageBackend>>,
 }
 
 impl SocketServer {
-    pub async fn new(socket_path: &str, storage: std::sync::Arc<Box<dyn crate::storage::StorageBackend>>) -> Result<Self> {
-        // Remove existing socket file if it exists
+    pub async fn new(
+        socket_path: &str,
+        storage: Arc<Box<dyn crate::storage::StorageBackend>>,
+    ) -> Result<Self> {
         if Path::new(socket_path).exists() {
             std::fs::remove_file(socket_path)?;
         }
@@ -37,12 +40,19 @@ impl SocketServer {
     }
 
     pub async fn run(&self) -> Result<()> {
-        println!("Socket server listening on {}", self.listener.local_addr()?.as_pathname().unwrap().to_string_lossy());
+        println!(
+            "Socket server listening on {}",
+            self.listener
+                .local_addr()?
+                .as_pathname()
+                .unwrap()
+                .to_string_lossy()
+        );
 
-        while let Some(stream) = self.listener.accept().await.ok() {
+        while let Ok((stream, _addr)) = self.listener.accept().await {
             let storage = self.storage.clone();
             tokio::spawn(async move {
-                if let Err(e) = Self::handle_connection(stream.0, storage).await {
+                if let Err(e) = Self::handle_connection(stream, storage).await {
                     eprintln!("Error handling connection: {}", e);
                 }
             });
@@ -51,7 +61,10 @@ impl SocketServer {
         Ok(())
     }
 
-    async fn handle_connection(stream: UnixStream, storage: std::sync::Arc<Box<dyn crate::storage::StorageBackend>>) -> Result<()> {
+    async fn handle_connection(
+        stream: UnixStream,
+        storage: Arc<Box<dyn crate::storage::StorageBackend>>,
+    ) -> Result<()> {
         let mut framed = Framed::new(stream, LengthDelimitedCodec::new());
 
         while let Some(frame) = framed.next().await {
@@ -59,29 +72,21 @@ impl SocketServer {
             let message: SocketMessage = serde_json::from_slice(&frame)?;
 
             let response = match message {
-                SocketMessage::RegisterCert(cert_reg) => {
-                    match storage.register_certificate(cert_reg).await {
-                        Ok(cert) => SocketResponse::CertRegistered(cert),
+                SocketMessage::RegisterKey(kp) => match storage.register_key(kp.clone()).await {
+                    Ok(_) => SocketResponse::KeyRegistered(kp),
+                    Err(e) => SocketResponse::Error(e.to_string()),
+                },
+                SocketMessage::RevokeKey { id } => match uuid::Uuid::parse_str(&id) {
+                    Ok(uuid) => match storage.revoke_key(uuid).await {
+                        Ok(_) => SocketResponse::KeyRevoked,
                         Err(e) => SocketResponse::Error(e.to_string()),
-                    }
-                }
-                SocketMessage::RevokeCert { id } => {
-                    match uuid::Uuid::parse_str(&id) {
-                        Ok(uuid) => {
-                            match storage.revoke_certificate(uuid).await {
-                                Ok(_) => SocketResponse::CertRevoked,
-                                Err(e) => SocketResponse::Error(e.to_string()),
-                            }
-                        }
-                        Err(e) => SocketResponse::Error(e.to_string()),
-                    }
-                }
-                SocketMessage::ListCerts => {
-                    match storage.list_certificates().await {
-                        Ok(certs) => SocketResponse::CertList(certs),
-                        Err(e) => SocketResponse::Error(e.to_string()),
-                    }
-                }
+                    },
+                    Err(e) => SocketResponse::Error(e.to_string()),
+                },
+                SocketMessage::ListKey => match storage.list_keys().await {
+                    Ok(keys) => SocketResponse::KeyList(keys),
+                    Err(e) => SocketResponse::Error(e.to_string()),
+                },
             };
 
             let response_bytes = serde_json::to_vec(&response)?;
@@ -110,10 +115,13 @@ impl SocketClient {
         let message_bytes = serde_json::to_vec(&message)?;
         framed.send(message_bytes.into()).await?;
 
-        let response = framed.next().await
+        let response_frame = framed
+            .next()
+            .await
             .ok_or_else(|| anyhow::anyhow!("No response received"))??;
-        let response: SocketResponse = serde_json::from_slice(&response)?;
+        let response: SocketResponse = serde_json::from_slice(&response_frame)?;
 
         Ok(response)
     }
 }
+

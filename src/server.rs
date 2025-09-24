@@ -1,10 +1,10 @@
-use actix_web::{get, App, HttpResponse, HttpServer, Responder, web};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
 use serde::Serialize;
+use std::sync::Arc;
 use utoipa::OpenApi;
 use utoipa::ToSchema;
 use utoipa_swagger_ui::SwaggerUi;
-use std::sync::Arc;
 
 #[derive(Serialize, ToSchema)]
 pub struct HealthResponse {
@@ -39,14 +39,11 @@ async fn healthcheck() -> impl Responder {
 }
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(index, healthcheck),
-    components(schemas(HealthResponse))
-)]
+#[openapi(paths(index, healthcheck), components(schemas(HealthResponse)))]
 struct ApiDoc;
 
 pub async fn run_server(config_path: &str) -> Result<()> {
-    let config = crate::config::Config::load_from_path(config_path)?;
+    let config = crate::config::Config::load(config_path)?;
     config.validate()?;
 
     let storage = create_storage(&config).await?;
@@ -71,7 +68,10 @@ pub async fn run_server(config_path: &str) -> Result<()> {
             .app_data(web::Data::new(storage.clone()))
             .service(index)
             .service(healthcheck)
-            .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", ApiDoc::openapi()))
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-doc/openapi.json", ApiDoc::openapi()),
+            )
     })
     .bind(&addr)?
     .run()
@@ -80,10 +80,10 @@ pub async fn run_server(config_path: &str) -> Result<()> {
     Ok(())
 }
 
-async fn create_storage(config: &crate::config::Config) -> Result<Box<dyn crate::storage::StorageBackend>> {
+async fn create_storage(
+    config: &crate::config::Config,
+) -> Result<Box<dyn crate::storage::StorageBackend>> {
     let database_url = config.storage.database_url.as_ref().unwrap();
     let storage = crate::storage::SqliteStorage::new(database_url).await?;
     Ok(Box::new(storage))
 }
-
-

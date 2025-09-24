@@ -6,35 +6,32 @@ use std::fmt::Debug;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Certificate {
+pub struct KeyPair {
     pub id: Uuid,
-    pub certificate_data: String,
+    pub public_key: String,
+    pub private_key: String,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
-    pub subject: String,
-    pub issuer: String,
-    pub serial_number: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CertificateRegistration {
-    pub certificate_data: String,
-    pub expires_at: Option<DateTime<Utc>>,
-    pub subject: String,
-    pub issuer: String,
-    pub serial_number: String,
+impl KeyPair {
+    pub fn new(private_key: String, expires_at: Option<DateTime<Utc>>) -> anyhow::Result<Self> {
+        let public_key = crate::cert::generate_public_from_private(&private_key)?;
+        Ok(Self {
+            id: Uuid::new_v4(),
+            private_key,
+            public_key,
+            created_at: Utc::now(),
+            expires_at,
+        })
+    }
 }
 
 #[async_trait]
 pub trait StorageBackend: Send + Sync + Debug {
-    async fn register_certificate(&self, cert: CertificateRegistration) -> Result<Certificate>;
-    async fn revoke_certificate(&self, id: Uuid) -> Result<()>;
-    async fn list_certificates(&self) -> Result<Vec<Certificate>>;
-    // TODO: implementation of StorageBackend for SQLite is missing these methods
-    #[allow(dead_code)]
-    async fn get_certificate(&self, id: Uuid) -> Result<Option<Certificate>>;
-    #[allow(dead_code)]
-    async fn health_check(&self) -> Result<()>;
+    async fn register_key(&self, keypair: KeyPair) -> Result<()>;
+    async fn revoke_key(&self, id: Uuid) -> Result<()>;
+    async fn list_keys(&self) -> Result<Vec<KeyPair>>;
 }
 
 pub mod sqlite;
