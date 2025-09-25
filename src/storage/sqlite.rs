@@ -13,10 +13,16 @@ pub struct SqliteStorage {
 
 impl SqliteStorage {
     pub async fn new(database_url: &str) -> Result<Self> {
+        if let Some(path) = database_url.strip_prefix("sqlite://") {
+            if !std::path::Path::new(path).exists() {
+                std::fs::File::create(path)?;
+            }
+        }
         let pool = SqlitePool::connect(database_url).await?;
+        println!("Running initial DB migration");
 
-        sqlx::query("DROP TABLE IF EXISTS keys;").execute(&pool).await?;
-        sqlx::query(INITIAL_MIGRATION).execute(&pool).await?;
+        let migration_sql = include_str!("../migrations/001_initial.sql");
+        sqlx::query(migration_sql).execute(&pool).await?;
 
         Ok(Self { pool })
     }

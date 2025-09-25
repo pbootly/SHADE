@@ -19,12 +19,14 @@ pub enum Commands {
     RegisterKey {
         #[arg(short, long)]
         private_key: String,
+        #[arg(long)]
+        expires_at: Option<String>,
     },
-    RevokeCert {
+    RevokeKey {
         #[arg(short, long)]
         id: String,
     },
-    ListCerts,
+    ListKeys,
     Validate,
 }
 
@@ -40,14 +42,21 @@ pub fn run_cli() -> Result<()> {
         Some(Commands::Server) => {
             tokio::runtime::Runtime::new()?.block_on(crate::server::run_server(&cli.config))?;
         }
-        Some(Commands::RegisterKey { private_key }) => {
-            tokio::runtime::Runtime::new()?.block_on(register_key(&cli.config, private_key))?;
+        Some(Commands::RegisterKey {
+            private_key,
+            expires_at,
+        }) => {
+            tokio::runtime::Runtime::new()?.block_on(register_key(
+                &cli.config,
+                private_key,
+                expires_at,
+            ))?;
         }
-        Some(Commands::RevokeCert { id }) => {
-            tokio::runtime::Runtime::new()?.block_on(revoke_certificate(&cli.config, id))?;
+        Some(Commands::RevokeKey { id }) => {
+            tokio::runtime::Runtime::new()?.block_on(revoke_key(&cli.config, id))?;
         }
-        Some(Commands::ListCerts) => {
-            tokio::runtime::Runtime::new()?.block_on(list_certificates(&cli.config))?;
+        Some(Commands::ListKeys) => {
+            tokio::runtime::Runtime::new()?.block_on(list_keys(&cli.config))?;
         }
         Some(Commands::Validate) => {
             let config = crate::config::Config::load(&cli.config)?;
@@ -61,21 +70,31 @@ pub fn run_cli() -> Result<()> {
     Ok(())
 }
 
-async fn register_key(config_path: &str, private_key: String) -> Result<()> {
+async fn register_key(
+    config_path: &str,
+    private_key: String,
+    expires_at: Option<String>,
+) -> Result<()> {
     let config = crate::config::Config::load(config_path)?;
     config.validate()?;
 
+    let expires_at = match expires_at {
+        Some(date_str) => {
+            Some(chrono::DateTime::parse_from_rfc3339(&date_str)?.with_timezone(&chrono::Utc))
+        }
+        None => None,
+    };
     match config.storage.mode {
         crate::config::StorageMode::File => {
             let storage = create_storage(&config).await?;
-            let keypair = crate::storage::KeyPair::new(private_key, None)?;
+            let keypair = crate::storage::KeyPair::new(private_key, expires_at)?;
             storage.register_key(keypair.clone()).await?;
             println!("Key registered successfully with ID: {}", keypair.id);
         }
         crate::config::StorageMode::Socket => {
             let socket_path = config.storage.socket_path.as_ref().unwrap();
             let client = crate::socket::SocketClient::new(socket_path);
-            let keypair = crate::storage::KeyPair::new(private_key, None)?;
+            let keypair = crate::storage::KeyPair::new(private_key, expires_at)?;
             let response = client
                 .send_message(crate::socket::SocketMessage::RegisterKey(keypair.clone()))
                 .await?;
@@ -95,7 +114,7 @@ async fn register_key(config_path: &str, private_key: String) -> Result<()> {
     Ok(())
 }
 
-async fn revoke_certificate(config_path: &str, id: String) -> Result<()> {
+async fn revoke_key(config_path: &str, id: String) -> Result<()> {
     let config = crate::config::Config::load(config_path)?;
     config.validate()?;
 
@@ -128,7 +147,7 @@ async fn revoke_certificate(config_path: &str, id: String) -> Result<()> {
 
     Ok(())
 }
-async fn list_certificates(config_path: &str) -> Result<()> {
+async fn list_keys(config_path: &str) -> Result<()> {
     let config = crate::config::Config::load(config_path)?;
     config.validate()?;
 
