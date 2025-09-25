@@ -28,6 +28,12 @@ pub enum Commands {
     },
     ListKeys,
     Validate,
+    RegisterHost {
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        public_key: String,
+    },
 }
 
 pub fn run_cli() -> Result<()> {
@@ -61,6 +67,21 @@ pub fn run_cli() -> Result<()> {
         Some(Commands::Validate) => {
             let config = crate::config::Config::load(&cli.config)?;
             config.validate()?;
+        }
+        Some(Commands::RegisterHost { url, public_key }) => {
+            let config = crate::config::Config::load(&cli.config)?;
+            config.validate()?;
+            let client = reqwest::blocking::Client::new();
+            let res = client
+                .post(format!("{}/register", url))
+                .json(&serde_json::json!({ "public_key": public_key }))
+                .send()?;
+            if res.status().is_success() {
+                let body: serde_json::Value = res.json()?;
+                println!("Host registered successfully: {}", body);
+            } else {
+                println!("Failed to register host: {} {}", res.status(), res.text()?);
+            }
         }
         None => {
             println!("No command provided. Use --help to see available commands.");

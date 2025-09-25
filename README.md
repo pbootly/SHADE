@@ -5,6 +5,16 @@ SHADE aims to be a generalised proxy for protecting services with relatively tri
 
 ## Usage:
 
+### Overview of Commands
+
+- **Start the server**: Start the SHADE server for testing or production.
+- **Generate client keypair**: Generate a private and public keypair for registering.
+- **Register a keypair**: Register a generated keypair into the SHADE system.
+- **Register a keypair with expiration**: Register a keypair with an expiration date.
+- **List registered certificates**: List all registered certificates.
+- **Revoke a certificate**: Revoke a certificate by specifying its ID.
+- **Validate the configuration**: Validate the SHADE configuration file.
+
 ### Start the server
 
 By default, the `shade server` command is for testing purposes only. It binds to `127.0.0.1` and uses the default configuration. For production, specify a configuration file with the `-c` flag (see examples below).
@@ -41,6 +51,28 @@ shade register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE=" 
 ```
 
 This registers the generated keypair into the SHADE system with an expiration date.
+
+### Registering Your Host
+
+#### On the Server
+To register your host on the server, you need to use the `/register` endpoint. Here is an example:
+
+```bash
+curl -X POST http://<server-ip>:<port>/register \
+-H "Content-Type: application/json" \
+-d '{"public_key": "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="}'
+```
+
+This command sends the `public_key` to the server, which validates it and registers the IP address of the client.
+
+#### On the Edge Node
+After registering the key on the server, you can use the `registerhost` command on an edge node:
+
+```bash
+shade registerhost --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
+```
+
+This command registers the edge node with the server by providing the public key.
 
 ### List registered certificates
 ```bash

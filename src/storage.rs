@@ -32,6 +32,10 @@ pub trait StorageBackend: Send + Sync + Debug {
     async fn register_key(&self, keypair: KeyPair) -> Result<()>;
     async fn revoke_key(&self, id: Uuid) -> Result<()>;
     async fn list_keys(&self) -> Result<Vec<KeyPair>>;
+#[allow(dead_code)]
+    async fn validate_public_key(&self, public_key: &str) -> Result<bool>;
+    #[allow(dead_code)]
+    async fn store_client_ip(&self, ip_address: String) -> Result<()>;
 }
 
 pub mod sqlite;

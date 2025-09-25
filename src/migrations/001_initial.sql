@@ -7,3 +7,9 @@ CREATE TABLE IF NOT EXISTS keys (
     expires_at DATETIME
 );
 
+-- Create table to store client IP addresses
+CREATE TABLE IF NOT EXISTS client_ips (
+    ip_address TEXT PRIMARY KEY,
+    created_at DATETIME NOT NULL
+);
+

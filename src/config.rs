@@ -51,10 +51,7 @@ impl Config {
         if Path::new(config_path).exists() {
             return Self::load_from_path(config_path);
         }
-        println!(
-            "Warning: Config file '{}' not found. Using default configuration.",
-            config_path
-        );
+        
         Ok(Config::default())
     }
 

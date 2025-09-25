@@ -26,10 +26,25 @@ impl SqliteStorage {
 
         Ok(Self { pool })
     }
-}
+    pub async fn store_client_ip(&self, ip_address: String) -> Result<()> {
+        sqlx::query("INSERT INTO client_ips (ip_address, created_at) VALUES (?, ?)")
+            .bind(ip_address)
+            .bind(chrono::Utc::now())
+            .execute(&self.pool)
+            .await?;
 
+        Ok(())
+    }
+}
 #[async_trait]
 impl StorageBackend for SqliteStorage {
+    async fn validate_public_key(&self, public_key: &str) -> Result<bool> {
+        let result = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM keys WHERE public_key = ?)")
+            .bind(public_key)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(result)
+    }
     async fn register_key(&self, keypair: super::KeyPair) -> Result<()> {
         let id = keypair.id;
         let now = Utc::now();
@@ -57,6 +72,18 @@ impl StorageBackend for SqliteStorage {
             .await?;
         Ok(())
     }
+    async fn store_client_ip(&self, ip_address: String) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO client_ips (ip_address, created_at) VALUES (?, ?)"
+        )
+        .bind(ip_address)
+        .bind(chrono::Utc::now())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     async fn list_keys(&self) -> Result<Vec<super::KeyPair>> {
         let rows =
             sqlx::query("SELECT id, public_key, private_key, created_at, expires_at FROM keys")
