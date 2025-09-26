@@ -54,17 +54,6 @@ This registers the generated keypair into the SHADE system with an expiration da
 
 ### Registering Your Host
 
-#### On the Server
-To register your host on the server, you need to use the `/register` endpoint. Here is an example:
-
-```bash
-curl -X POST http://<server-ip>:<port>/register \
--H "Content-Type: application/json" \
--d '{"public_key": "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="}'
-```
-
-This command sends the `public_key` to the server, which validates it and registers the IP address of the client.
-
 #### On the Edge Node
 After registering the key on the server, you can use the `registerhost` command on an edge node:
 
@@ -74,6 +63,7 @@ shade registerhost --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
 
 This command registers the edge node with the server by providing the public key.
 
+#### Administrative Tools
 ### List registered certificates
 ```bash
 shade list-keys
