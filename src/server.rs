@@ -1,15 +1,9 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
-use serde::Serialize;
 use std::sync::Arc;
+use tracing::{error, info};
 use utoipa::OpenApi;
-use utoipa::ToSchema;
 use utoipa_swagger_ui::SwaggerUi;
-
-#[derive(Serialize, ToSchema)]
-pub struct HealthResponse {
-    status: String,
-}
 
 #[utoipa::path(
     get,
@@ -32,7 +26,7 @@ async fn index() -> impl Responder {
 )]
 #[get("/healthcheck")]
 async fn healthcheck() -> impl Responder {
-    let resp = HealthResponse {
+    let resp = crate::models::HealthResponse {
         status: "SHADE server running".to_string(),
     };
     HttpResponse::Ok().json(resp)
@@ -45,12 +39,18 @@ async fn healthcheck() -> impl Responder {
         (status = 200, description = "Returns the client's IP address", body = String)
     )
 )]
-#[get("/client-ip")]
+#[tracing::instrument(name = "ip", skip(req))]
+#[get("/ip")]
 async fn return_client_ip(req: actix_web::HttpRequest) -> impl Responder {
-    if let Some(peer_addr) = req.peer_addr() {
-        HttpResponse::Ok().body(peer_addr.ip().to_string())
-    } else {
-        HttpResponse::InternalServerError().body("Unable to determine client IP")
+    match return_ip(&req) {
+        Some((source, ip)) => {
+            info!("client IP determined via {}: {}", source, ip);
+            HttpResponse::Ok().body(ip)
+        }
+        None => {
+            error!("unable to determine client IP");
+            HttpResponse::InternalServerError().body("Unable to determine client IP")
+        }
     }
 }
 
@@ -64,6 +64,7 @@ async fn return_client_ip(req: actix_web::HttpRequest) -> impl Responder {
         (status = 500, description = "Unable to register the IP address")
     )
 )]
+#[tracing::instrument(name = "register", skip(req))]
 #[post("/register")]
 async fn register_client_ip(
     req: actix_web::HttpRequest,
@@ -73,25 +74,33 @@ async fn register_client_ip(
     let public_key = &body.public_key;
 
     // Validate public_key exists in the database
-    if !storage.validate_public_key(public_key).await.unwrap_or(false) {
+    if !storage
+        .validate_public_key(public_key)
+        .await
+        .unwrap_or(false)
+    {
+        error!("public key attempted but not found");
         return HttpResponse::BadRequest().body("Invalid public_key");
     }
 
     // Register client IP
-    if let Some(peer_addr) = req.peer_addr() {
-        let ip_address = peer_addr.ip().to_string();
-        if let Err(e) = storage.store_client_ip(ip_address.clone()).await {
-            eprintln!("Failed to store IP address: {}", e);
-            return HttpResponse::InternalServerError().body("Unable to register the IP address");
+    match return_ip(&req) {
+        Some((_source, ip)) => {
+            info!("registering client: {}", ip);
+            HttpResponse::Ok().body("client registered")
         }
-        HttpResponse::Ok().body("IP address registered successfully")
-    } else {
-        HttpResponse::InternalServerError().body("Unable to determine client IP")
+        None => {
+            error!("IP registration failed. Please try again");
+            HttpResponse::InternalServerError().body("something went wrong")
+        }
     }
 }
 
 #[derive(OpenApi)]
-#[openapi(paths(index, healthcheck), components(schemas(HealthResponse)))]
+#[openapi(
+    paths(index, healthcheck, return_client_ip, register_client_ip),
+    components(schemas(crate::models::HealthResponse, crate::models::RegisterRequest))
+)]
 struct ApiDoc;
 
 pub async fn run_server(config_path: &str) -> Result<()> {
@@ -102,9 +111,8 @@ pub async fn run_server(config_path: &str) -> Result<()> {
     let storage = Arc::new(storage);
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
-    println!("SHADE server running on http://{}", addr);
+    info!("SHADE server running on http://{}", addr);
 
-    // Start socket server if in socket mode
     if matches!(config.storage.mode, crate::config::StorageMode::Socket) {
         let socket_path = config.storage.socket_path.as_ref().unwrap();
         let socket_server = crate::socket::SocketServer::new(socket_path, storage.clone()).await?;
@@ -120,6 +128,8 @@ pub async fn run_server(config_path: &str) -> Result<()> {
             .app_data(web::Data::new(storage.clone()))
             .service(index)
             .service(healthcheck)
+            .service(return_client_ip)
+            .service(register_client_ip)
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
@@ -138,4 +148,30 @@ async fn create_storage(
     let database_url = config.storage.database_url.as_ref().unwrap();
     let storage = crate::storage::SqliteStorage::new(database_url).await?;
     Ok(Box::new(storage))
+}
+
+fn return_ip(req: &actix_web::HttpRequest) -> Option<(&str, String)> {
+    // Attempt to extract the client IP from headers or peer address
+    (|| {
+        // Check common proxy headers first
+        if let Some(forwarded) = req.headers().get("x-forwarded-for") {
+            if let Ok(forwarded_str) = forwarded.to_str() {
+                if let Some(ip) = forwarded_str.split(',').next() {
+                    return Some(("x-forwarded-for", ip.trim().to_string()));
+                }
+            }
+        }
+
+        if let Some(forwarded) = req.headers().get("forwarded") {
+            if let Ok(forwarded_str) = forwarded.to_str() {
+                if let Some(ip) = forwarded_str.split('=').nth(1) {
+                    return Some(("forwarded", ip.trim().to_string()));
+                }
+            }
+        }
+
+        // Fallback to peer address
+        req.peer_addr()
+            .map(|addr| ("peer_addr", addr.ip().to_string()))
+    })()
 }

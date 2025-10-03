@@ -1,13 +1,15 @@
-mod cli;
+use crate::logger::Logger;
 mod cert;
-mod server;
+mod cli;
 mod config;
-mod storage;
-mod socket;
+mod logger;
 mod models;
+mod server;
+mod socket;
+mod storage;
 
 fn main() -> anyhow::Result<()> {
+    Logger::new();
     cli::run_cli()?;
     Ok(())
 }
-

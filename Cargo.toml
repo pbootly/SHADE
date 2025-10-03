@@ -28,3 +28,5 @@ base64 = "0.22.1"
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 rand = "0.8"
 reqwest = { version = "0.12.23", features = ["blocking", "json"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
