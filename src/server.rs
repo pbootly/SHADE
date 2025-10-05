@@ -25,6 +25,9 @@ async fn index() -> impl Responder {
     )
 )]
 #[get("/healthcheck")]
+#[tracing::instrument(
+    name = "healthcheck",
+)]
 async fn healthcheck() -> impl Responder {
     let resp = crate::models::HealthResponse {
         status: "SHADE server running".to_string(),
@@ -74,6 +77,8 @@ async fn register_client_ip(
     let public_key = &body.public_key;
 
     // Validate public_key exists in the database
+    info!("validating public key");
+    info!(storage = ?storage);
     if !storage
         .validate_public_key(public_key)
         .await

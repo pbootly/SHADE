@@ -30,3 +30,5 @@ rand = "0.8"
 reqwest = { version = "0.12.23", features = ["blocking", "json"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-bunyan-formatter = "0.3.10"
+tracing-log = "0.2.0"
