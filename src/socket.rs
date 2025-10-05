@@ -23,13 +23,13 @@ pub enum SocketResponse {
 
 pub struct SocketServer {
     listener: UnixListener,
-    storage: Arc<Box<dyn crate::storage::StorageBackend>>,
+    storage: Arc<dyn crate::storage::StorageBackend>,
 }
 
 impl SocketServer {
     pub async fn new(
         socket_path: &str,
-        storage: Arc<Box<dyn crate::storage::StorageBackend>>,
+        storage: Arc<dyn crate::storage::StorageBackend>,
     ) -> Result<Self> {
         if Path::new(socket_path).exists() {
             std::fs::remove_file(socket_path)?;
@@ -63,7 +63,7 @@ impl SocketServer {
 
     async fn handle_connection(
         stream: UnixStream,
-        storage: Arc<Box<dyn crate::storage::StorageBackend>>,
+        storage: Arc<dyn crate::storage::StorageBackend>,
     ) -> Result<()> {
         let mut framed = Framed::new(stream, LengthDelimitedCodec::new());
 

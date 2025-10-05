@@ -35,6 +35,22 @@ impl SqliteStorage {
 
         Ok(())
     }
+
+    pub async fn list_hosts(&self) -> Result<Vec<super::HostPair>> {
+        let rows = sqlx::query("SELECT ip_address, created_at FROM client_ips")
+            .fetch_all(&self.pool)
+            .await?;
+
+        let hosts = rows
+            .into_iter()
+            .map(|row| super::HostPair {
+                ip: row.get("ip_address"),
+                created_at: row.get("created_at"),
+            })
+            .collect();
+
+        Ok(hosts)
+    }
 }
 #[async_trait]
 impl StorageBackend for SqliteStorage {
@@ -82,6 +98,21 @@ impl StorageBackend for SqliteStorage {
         .await?;
 
         Ok(())
+    }
+    async fn list_hosts(&self) -> Result<Vec<super::HostPair>> {
+        let rows = sqlx::query("SELECT ip_address, created_at FROM client_ips")
+            .fetch_all(&self.pool)
+            .await?;
+
+        let hosts = rows
+            .into_iter()
+            .map(|row| super::HostPair {
+                ip: row.get("ip_address"),
+                created_at: row.get("created_at"),
+            })
+            .collect();
+
+        Ok(hosts)
     }
 
     async fn list_keys(&self) -> Result<Vec<super::KeyPair>> {

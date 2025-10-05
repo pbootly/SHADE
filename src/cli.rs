@@ -34,6 +34,7 @@ pub enum Commands {
         #[arg(long)]
         public_key: String,
     },
+    ListHosts,
 }
 
 pub fn run_cli() -> Result<()> {
@@ -82,6 +83,9 @@ pub fn run_cli() -> Result<()> {
             } else {
                 println!("Failed to register host: {} {}", res.status(), res.text()?);
             }
+        }
+        Some(Commands::ListHosts) => {
+            tokio::runtime::Runtime::new()?.block_on(list_hosts(&cli.config))?;
         }
         None => {
             println!("No command provided. Use --help to see available commands.");
@@ -206,6 +210,22 @@ async fn list_keys(config_path: &str) -> Result<()> {
                 }
             }
         }
+    }
+
+    Ok(())
+}
+
+async fn list_hosts(config_path: &str) -> Result<()> {
+    let config = crate::config::Config::load(config_path)?;
+    config.validate()?;
+
+    let storage = create_storage(&config).await?;
+    let hosts = storage.list_hosts().await?;
+    for host in hosts {
+        println!(
+            "IP Address: {}, Registered At: {}",
+            host.ip, host.created_at
+        );
     }
 
     Ok(())

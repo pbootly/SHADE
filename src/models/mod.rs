@@ -10,3 +10,8 @@ pub struct HealthResponse {
 pub struct RegisterRequest {
     pub public_key: String,
 }
+
+#[derive(Serialize, ToSchema)]
+pub struct RegisterResponse {
+    pub message: String,
+}

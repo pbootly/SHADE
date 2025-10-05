@@ -92,7 +92,10 @@ async fn register_client_ip(
     match return_ip(&req) {
         Some((_source, ip)) => {
             info!("registering client: {}", ip);
-            HttpResponse::Ok().body("client registered")
+            let resp = crate::models::RegisterResponse {
+                message: format!("IP {} registered successfully", ip),
+            };
+            HttpResponse::Ok().json(resp)
         }
         None => {
             error!("IP registration failed. Please try again");
@@ -113,7 +116,7 @@ pub async fn run_server(config_path: &str) -> Result<()> {
     config.validate()?;
 
     let storage = create_storage(&config).await?;
-    let storage = Arc::new(storage);
+    let storage = Arc::clone(&storage);
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
     info!("SHADE server running on http://{}", addr);
@@ -149,10 +152,14 @@ pub async fn run_server(config_path: &str) -> Result<()> {
 
 async fn create_storage(
     config: &crate::config::Config,
-) -> Result<Box<dyn crate::storage::StorageBackend>> {
+) -> Result<Arc<dyn crate::storage::StorageBackend>> {
     let database_url = config.storage.database_url.as_ref().unwrap();
-    let storage = crate::storage::SqliteStorage::new(database_url).await?;
-    Ok(Box::new(storage))
+
+    // Wrap the concrete SqliteStorage in Arc and coerce to trait object
+    let storage: Arc<dyn crate::storage::StorageBackend> =
+        Arc::new(crate::storage::SqliteStorage::new(database_url).await?);
+
+    Ok(storage)
 }
 
 fn return_ip(req: &actix_web::HttpRequest) -> Option<(&str, String)> {
