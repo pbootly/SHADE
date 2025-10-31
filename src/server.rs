@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use anyhow::Result;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -25,9 +25,7 @@ async fn index() -> impl Responder {
     )
 )]
 #[get("/healthcheck")]
-#[tracing::instrument(
-    name = "healthcheck",
-)]
+#[tracing::instrument(name = "healthcheck")]
 async fn healthcheck() -> impl Responder {
     let resp = crate::models::HealthResponse {
         status: "SHADE server running".to_string(),
@@ -92,6 +90,10 @@ async fn register_client_ip(
     match return_ip(&req) {
         Some((_source, ip)) => {
             info!("registering client: {}", ip);
+            if let Err(e) = storage.store_client_ip(ip.clone()).await {
+                error!("Failed to store IP: {}", e);
+                return HttpResponse::InternalServerError().body("Failed to store IP");
+            }
             let resp = crate::models::RegisterResponse {
                 message: format!("IP {} registered successfully", ip),
             };
@@ -150,7 +152,7 @@ pub async fn run_server(config_path: &str) -> Result<()> {
     Ok(())
 }
 
-async fn create_storage(
+pub async fn create_storage(
     config: &crate::config::Config,
 ) -> Result<Arc<dyn crate::storage::StorageBackend>> {
     let database_url = config.storage.database_url.as_ref().unwrap();

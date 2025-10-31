@@ -58,7 +58,7 @@ This registers the generated keypair into the SHADE system with an expiration da
 After registering the key on the server, you can use the `registerhost` command on an edge node:
 
 ```bash
-shade registerhost --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
+shade register-host --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
 ```
 
 This command registers the edge node with the server by providing the public key.

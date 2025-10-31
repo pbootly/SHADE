@@ -7,6 +7,7 @@ use std::path::Path;
 pub struct Config {
     pub storage: StorageConfig,
     pub server: ServerConfig,
+    pub proxy: ProxyConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,6 +15,12 @@ pub struct StorageConfig {
     pub mode: StorageMode,
     pub database_url: Option<String>,
     pub socket_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProxyConfig {
+    pub listen_addr: String,   // e.g., "127.0.0.1:4000"
+    pub upstream_addr: String, // e.g., "127.0.0.1:3000"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +49,10 @@ impl Default for Config {
                 host: "127.0.0.1".to_string(),
                 port: 3000,
             },
+            proxy: ProxyConfig {
+                listen_addr: "127.0.0.1:3001".to_string(),
+                upstream_addr: "127.0.0.1:3002".to_string(),
+            },
         }
     }
 }
@@ -51,7 +62,7 @@ impl Config {
         if Path::new(config_path).exists() {
             return Self::load_from_path(config_path);
         }
-        
+
         Ok(Config::default())
     }
 

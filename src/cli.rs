@@ -1,5 +1,12 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct KeyPair {
+    private: String,
+    public: String,
+}
 
 #[derive(Parser)]
 #[command(name = "shade")]
@@ -43,11 +50,34 @@ pub fn run_cli() -> Result<()> {
     match cli.command {
         Some(Commands::GenKeys) => {
             let (priv_b64, pub_b64) = crate::cert::generate_keys()?;
-            println!("Private key: {}", priv_b64);
-            println!("Public key:  {}", pub_b64);
+            let keys = KeyPair {
+                private: priv_b64,
+                public: pub_b64,
+            };
+
+            // Serialize to JSON string
+            let json_output = serde_json::to_string_pretty(&keys)?;
+            println!("{}", json_output);
         }
         Some(Commands::Server) => {
-            tokio::runtime::Runtime::new()?.block_on(crate::server::run_server(&cli.config))?;
+            tokio::runtime::Runtime::new()?.block_on(async {
+                let config_for_proxy = cli.config.clone();
+                let config_for_server = cli.config.clone();
+
+                let proxy_handle = tokio::spawn(async move {
+                    if let Err(e) = crate::proxy::run_proxy(&config_for_proxy).await {
+                        eprintln!("Proxy error: {}", e);
+                    }
+                });
+
+                if let Err(e) = crate::server::run_server(&config_for_server).await {
+                    eprintln!("Server error: {}", e);
+                }
+
+                let _ = proxy_handle.await;
+
+                Ok::<(), anyhow::Error>(())
+            })?;
         }
         Some(Commands::RegisterKey {
             private_key,
@@ -221,6 +251,7 @@ async fn list_hosts(config_path: &str) -> Result<()> {
 
     let storage = create_storage(&config).await?;
     let hosts = storage.list_hosts().await?;
+    println!("Debug: found {} hosts", hosts.len());
     for host in hosts {
         println!(
             "IP Address: {}, Registered At: {}",

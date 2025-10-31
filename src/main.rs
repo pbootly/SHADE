@@ -4,16 +4,13 @@ mod cli;
 mod config;
 mod logger;
 mod models;
+mod proxy;
 mod server;
 mod socket;
 mod storage;
 
 fn main() -> anyhow::Result<()> {
-    let subscriber = get_subscriber(
-        "shade".into(),
-        "info".into(),
-        std::io::stdout,
-    );
+    let subscriber = get_subscriber("shade".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
     cli::run_cli()?;
     Ok(())
