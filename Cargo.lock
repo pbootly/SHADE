@@ -2399,7 +2399,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "shade"
+name = "shade-proxy"
 version = "1.0.0"
 dependencies = [
  "actix-web",
