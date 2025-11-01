@@ -1,4 +1,4 @@
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
 use std::sync::Arc;
 use tracing::{error, info};

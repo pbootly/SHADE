@@ -1,87 +1,137 @@
 # SHADE
 _Simple Host Attestation & Dynamic Enrollment_
 
-SHADE aims to be a generalised proxy for protecting services with relatively trivial node attestment via IP address. It is managed with a CLI tool to create, add and revoke certificates.
+SHADE is a generalized proxy for protecting services via simple node attestation using IP addresses. It is managed with a CLI tool to create, add, revoke, and validate certificates.
 
-## Usage:
+---
 
-### Overview of Commands
+## ⚡ Features
 
-- **Start the server**: Start the SHADE server for testing or production.
-- **Generate client keypair**: Generate a private and public keypair for registering.
-- **Register a keypair**: Register a generated keypair into the SHADE system.
-- **Register a keypair with expiration**: Register a keypair with an expiration date.
-- **List registered certificates**: List all registered certificates.
-- **Revoke a certificate**: Revoke a certificate by specifying its ID.
-- **Validate the configuration**: Validate the SHADE configuration file.
+- Generate and manage client keypairs  
+- Register keys with optional expiration  
+- Revoke keys or certificates  
+- Store and validate edge node IPs  
+- Transparent TCP proxy with attestation  
+
+---
+```
++-----------------+                                             
+|   Client/Edge   |                                             
+|   Node          |────────────────────────────────────────────┐
++-----------------+                                            │
+          |                                                    │
+          |  Register public key                               │
+          v                                                    │
++-----------------+                                            │
+| SHADE HTTP      |                                            │
+| Server          |                                            │
+| (Registration & |                                            │
+|  Key Storage)   |                                            │
++-----------------+                                            │
+          |                                                    │
+          |  Stores client IP upon successful registration     │
+          v                                                    │
++-----------------+                                            │
+| SHADE TCP       |                                            │
+| Proxy           |                                            │
+| (IP Validation) |◄────────────────IP─────────────────────────┘
++-----------------+                                             
+          |                                                     
+          |  Allows traffic for registered IP                   
+          v                                                     
++-----------------+                                             
+| Protected       |                                             
+| Service         |                                             
++-----------------+
+
+```
+
+##  Installation & Usage
 
 ### Start the server
 
-By default, the `shade server` command is for testing purposes only. It binds to `127.0.0.1` and uses the default configuration. For production, specify a configuration file with the `-c` flag (see examples below).
+By default, `shade server` runs for testing on `127.0.0.1` using the default configuration:
 
-```bash
+```sh
 shade server
 ```
-### Production Example
 
-To run SHADE in a production environment, specify the configuration file with the `-c` flag. For example:
+For production - specify a configuration file with the `-c` flag:
 
-```bash
+```sh
 shade -c example_config.yaml server
 ```
 
-### Generate client keypair
-```bash
+### Key registration
+Generate a client keypair (with access to shade socket):
+
+```sh
 shade gen-keys
-Private key: K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE=
-Public key:  hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE=
 ```
 
-This will output a generated private and public keypair. Use the output for the next steps.
+Register the keypair (with access to shade socket):
 
-### Register a keypair
-```bash
+```sh
 shade register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE="
 ```
 
-This registers the generated keypair into the SHADE system.
-### Register a keypair with expiration
-```bash
+Optionally, add expiration date:
+
+```sh
 shade register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE=" --expires-at "2025-12-31T23:59:59Z"
 ```
 
-This registers the generated keypair into the SHADE system with an expiration date.
-
-### Registering Your Host
-
-#### On the Edge Node
-After registering the key on the server, you can use the `registerhost` command on an edge node:
-
-```bash
+### Host registration
+On an edge node - register the host
+```sh
 shade register-host --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
 ```
 
-This command registers the edge node with the server by providing the public key.
+### Administrative commands
 
-#### Administrative Tools
-### List registered certificates
-```bash
+* List registered certificates
+```sh
 shade list-keys
 ```
 
-This command lists all the registered certificates in the SHADE system.
-
-### Revoke a certificate by ID
-```bash
+* Revoke a certificate
+```sh
 shade revoke-cert --id "<UUID>"
 ```
 
-This revokes a certificate with the specified ID.
-
-### Validate the configuration
-```bash
+* Validate configuration
+```sh
 shade validate
 ```
 
-This validates the SHADE configuration file.
+### E2E demo (`e2e.sh`)
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() { echo "$1"; exit 1; }
+
+# Build the SHADE binary
+cargo build || fail "Build failed"
+
+SHADE="target/debug/shade -c ./example_config.yaml"
+
+# Generate a keypair
+keys=$($SHADE gen-keys)
+public_key=$(echo "$keys" | jq -r .public)
+private_key=$(echo "$keys" | jq -r .private)
+
+# Register the private key
+$SHADE register-key --private-key "$private_key"
+
+# List keys
+$SHADE list-keys
+
+# Register host
+$SHADE register-host --public-key "$public_key" --url "http://localhost:3000"
+
+# List hosts
+$SHADE list-hosts
+```
+
 

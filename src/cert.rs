@@ -1,5 +1,5 @@
 use anyhow::Result;
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use rand::rngs::OsRng;
 use x25519_dalek::{PublicKey, StaticSecret};
 
