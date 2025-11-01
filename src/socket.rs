@@ -8,9 +8,9 @@ use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SocketMessage {
-    RegisterKey(crate::storage::KeyPair),
-    RevokeKey { id: String },
-    ListKey,
+    Register(crate::storage::KeyPair),
+    Revoke { id: String },
+    List,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,18 +72,18 @@ impl SocketServer {
             let message: SocketMessage = serde_json::from_slice(&frame)?;
 
             let response = match message {
-                SocketMessage::RegisterKey(kp) => match storage.register_key(kp.clone()).await {
+                SocketMessage::Register(kp) => match storage.register_key(kp.clone()).await {
                     Ok(_) => SocketResponse::KeyRegistered(kp),
                     Err(e) => SocketResponse::Error(e.to_string()),
                 },
-                SocketMessage::RevokeKey { id } => match uuid::Uuid::parse_str(&id) {
+                SocketMessage::Revoke { id } => match uuid::Uuid::parse_str(&id) {
                     Ok(uuid) => match storage.revoke_key(uuid).await {
                         Ok(_) => SocketResponse::KeyRevoked,
                         Err(e) => SocketResponse::Error(e.to_string()),
                     },
                     Err(e) => SocketResponse::Error(e.to_string()),
                 },
-                SocketMessage::ListKey => match storage.list_keys().await {
+                SocketMessage::List => match storage.list_keys().await {
                     Ok(keys) => SocketResponse::KeyList(keys),
                     Err(e) => SocketResponse::Error(e.to_string()),
                 },
@@ -124,4 +124,3 @@ impl SocketClient {
         Ok(response)
     }
 }
-

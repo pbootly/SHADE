@@ -168,20 +168,18 @@ fn return_ip(req: &actix_web::HttpRequest) -> Option<(&str, String)> {
     // Attempt to extract the client IP from headers or peer address
     (|| {
         // Check common proxy headers first
-        if let Some(forwarded) = req.headers().get("x-forwarded-for") {
-            if let Ok(forwarded_str) = forwarded.to_str() {
-                if let Some(ip) = forwarded_str.split(',').next() {
-                    return Some(("x-forwarded-for", ip.trim().to_string()));
-                }
-            }
+        if let Some(forwarded) = req.headers().get("x-forwarded-for")
+            && let Ok(forwarded_str) = forwarded.to_str()
+            && let Some(ip) = forwarded_str.split(',').next()
+        {
+            return Some(("x-forwarded-for", ip.trim().to_string()));
         }
 
-        if let Some(forwarded) = req.headers().get("forwarded") {
-            if let Ok(forwarded_str) = forwarded.to_str() {
-                if let Some(ip) = forwarded_str.split('=').nth(1) {
-                    return Some(("forwarded", ip.trim().to_string()));
-                }
-            }
+        if let Some(forwarded) = req.headers().get("forwarded")
+            && let Ok(forwarded_str) = forwarded.to_str()
+            && let Some(ip) = forwarded_str.split('=').nth(1)
+        {
+            return Some(("forwarded", ip.trim().to_string()));
         }
 
         // Fallback to peer address

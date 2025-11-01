@@ -13,10 +13,10 @@ pub struct SqliteStorage {
 
 impl SqliteStorage {
     pub async fn new(database_url: &str) -> Result<Self> {
-        if let Some(path) = database_url.strip_prefix("sqlite://") {
-            if !std::path::Path::new(path).exists() {
-                std::fs::File::create(path)?;
-            }
+        if let Some(path) = database_url.strip_prefix("sqlite://")
+            && !std::path::Path::new(path).exists()
+        {
+            std::fs::File::create(path)?;
         }
         let pool = SqlitePool::connect(database_url).await?;
         println!("Running initial DB migration");
@@ -37,6 +37,15 @@ impl StorageBackend for SqliteStorage {
             .await?;
         Ok(result)
     }
+    async fn validate_host_ip(&self, ip_address: &str) -> Result<bool> {
+        let exists =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM client_ips WHERE ip_address = ?)")
+                .bind(ip_address)
+                .fetch_one(&self.pool)
+                .await?;
+        Ok(exists)
+    }
+
     async fn register_key(&self, keypair: super::KeyPair) -> Result<()> {
         let id = keypair.id;
         let now = Utc::now();

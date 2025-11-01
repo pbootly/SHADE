@@ -74,7 +74,7 @@ pub fn run_cli() -> Result<()> {
                     eprintln!("Server error: {}", e);
                 }
 
-                let _ = proxy_handle.await;
+                proxy_handle.abort();
 
                 Ok::<(), anyhow::Error>(())
             })?;
@@ -151,7 +151,7 @@ async fn register_key(
             let client = crate::socket::SocketClient::new(socket_path);
             let keypair = crate::storage::KeyPair::new(private_key, expires_at)?;
             let response = client
-                .send_message(crate::socket::SocketMessage::RegisterKey(keypair.clone()))
+                .send_message(crate::socket::SocketMessage::Register(keypair.clone()))
                 .await?;
             match response {
                 crate::socket::SocketResponse::KeyRegistered(kp) => {
@@ -184,7 +184,7 @@ async fn revoke_key(config_path: &str, id: String) -> Result<()> {
             let socket_path = config.storage.socket_path.as_ref().unwrap();
             let client = crate::socket::SocketClient::new(socket_path);
             let response = client
-                .send_message(crate::socket::SocketMessage::RevokeKey { id: id.clone() })
+                .send_message(crate::socket::SocketMessage::Revoke { id: id.clone() })
                 .await?;
             match response {
                 crate::socket::SocketResponse::KeyRevoked => {
@@ -221,7 +221,7 @@ async fn list_keys(config_path: &str) -> Result<()> {
             let socket_path = config.storage.socket_path.as_ref().unwrap();
             let client = crate::socket::SocketClient::new(socket_path);
             let response = client
-                .send_message(crate::socket::SocketMessage::ListKey)
+                .send_message(crate::socket::SocketMessage::List)
                 .await?;
             match response {
                 crate::socket::SocketResponse::KeyList(keys) => {

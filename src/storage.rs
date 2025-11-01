@@ -38,6 +38,7 @@ pub trait StorageBackend: Send + Sync + Debug {
     async fn revoke_key(&self, id: Uuid) -> Result<()>;
     async fn list_keys(&self) -> Result<Vec<KeyPair>>;
     async fn validate_public_key(&self, public_key: &str) -> Result<bool>;
+    async fn validate_host_ip(&self, ip_address: &str) -> Result<bool>;
     async fn store_client_ip(&self, ip_address: String) -> Result<()>;
     async fn list_hosts(&self) -> Result<Vec<HostPair>>;
 }

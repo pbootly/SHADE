@@ -24,13 +24,12 @@ pub async fn run_proxy(config_path: &str) -> Result<()> {
     loop {
         let (mut inbound, addr) = listener.accept().await?;
         let storage = Arc::clone(&storage);
-        let upstream_addr = upstream_addr.clone();
 
         tokio::spawn(async move {
             let client_ip = addr.ip().to_string();
 
             // Validate connecting IP
-            match storage.validate_public_key(&client_ip).await {
+            match storage.validate_host_ip(&client_ip).await {
                 Ok(true) => {
                     println!("Allowed connection from {}", client_ip);
                 }
