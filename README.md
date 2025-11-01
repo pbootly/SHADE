@@ -50,58 +50,58 @@ SHADE is a generalized proxy for protecting services via simple node attestation
 
 ### Start the server
 
-By default, `shade server` runs for testing on `127.0.0.1` using the default configuration:
+By default, `shade-proxy server` runs for testing on `127.0.0.1` using the default configuration:
 
 ```sh
-shade server
+shade-proxy server
 ```
 
 For production - specify a configuration file with the `-c` flag:
 
 ```sh
-shade -c example_config.yaml server
+shade-proxy -c example_config.yaml server
 ```
 
 ### Key registration
 Generate a client keypair (with access to shade socket):
 
 ```sh
-shade gen-keys
+shade-proxy gen-keys
 ```
 
 Register the keypair (with access to shade socket):
 
 ```sh
-shade register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE="
+shade-proxy register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE="
 ```
 
 Optionally, add expiration date:
 
 ```sh
-shade register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE=" --expires-at "2025-12-31T23:59:59Z"
+shade-proxy register-key --private-key "K4H8FURo0WnWM24y3I5sSN+0aECmS1CceK2i8PACeyE=" --expires-at "2025-12-31T23:59:59Z"
 ```
 
 ### Host registration
 On an edge node - register the host
 ```sh
-shade register-host --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
+shade-proxy register-host --public-key "hUQ1JHW1noXPZKXHidDgikT4iWC1/wEj+LR8gAPYGgE="
 ```
 
 ### Administrative commands
 
 * List registered certificates
 ```sh
-shade list-keys
+shade-proxy list-keys
 ```
 
 * Revoke a certificate
 ```sh
-shade revoke-cert --id "<UUID>"
+shade-proxy revoke-cert --id "<UUID>"
 ```
 
 * Validate configuration
 ```sh
-shade validate
+shade-proxy validate
 ```
 
 ### E2E demo (`e2e.sh`)
@@ -114,7 +114,7 @@ fail() { echo "$1"; exit 1; }
 # Build the SHADE binary
 cargo build || fail "Build failed"
 
-SHADE="target/debug/shade -c ./example_config.yaml"
+SHADE="shade-proxy -c ./example_config.yaml"
 
 # Generate a keypair
 keys=$($SHADE gen-keys)
