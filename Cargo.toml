@@ -1,6 +1,6 @@
 [package]
 name = "shade-proxy"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 
 description = "SHADE: Simple Host Attestation & Dynamic Enrollment with TCP proxy"

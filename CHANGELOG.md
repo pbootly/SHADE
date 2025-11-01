@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-10-31
+### Added
+N/A (documentation update)
+
+### Fixed
+- README.md to reflect package name conflict (shade-proxy) 
+- CLI commands:
+  - `shade-proxy server` - start the SHADE server
+  - `shade-proxy gen-keys` - generate private/public keypairs
+  - `shade-proxy register-key` - register keys with optional expiration
+  - `shade-proxy register-host` - register a host by public key
+  - `shade-proxy list-keys` - list all registered keys
+  - `shade-proxy list-hosts` - list all registered hosts
+  - `shade-proxy revoke-cert` - revoke a certificate by ID
+  - `shade-proxy validate` - validate the configuration file
+
 ## [1.0.0] - 2025-10-31
 ### Added
 - Initial stable release of SHADE: Simple Host Attestation & Dynamic Enrollment.
