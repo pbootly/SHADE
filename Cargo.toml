@@ -5,7 +5,6 @@ edition = "2024"
 
 description = "SHADE: Simple Host Attestation & Dynamic Enrollment with TCP proxy"
 license = "MIT"
-license-file = "LICENSE"
 repository = "https://github.com/pbootly/SHADE"
 homepage = "https://github.com/pbootly/SHADE"
 documentation = "https://docs.rs/shade"
